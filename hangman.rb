@@ -18,7 +18,7 @@ class Game
     introduction
     puts "Would you like to play a new game? (y/n): "
     new_game = gets.chomp.downcase
-    if new_game == "y" ? play_new_game : continue_game
+    new_game == "y" ? play_new_game : load_game
     while play_again?
       reset_counters
       play_new_game
@@ -71,7 +71,7 @@ class Game
         end
       end
     end
-    unless win?
+    unless win? || save_state == "y"
       @hangman.draw_hangman(@bad_guesses_used)
       puts "\nBetter luck next time!"
       puts "The hidden word was: #{@code_word}"
@@ -115,7 +115,7 @@ class Game
       bad_guesses_used: @bad_guesses_used
     }
 
-    File.write("save_files/#{filename}", JSON.dump(save_date))
+    File.write("save_files/#{filename}", JSON.dump(save_data))
   end
 
   def load_game
@@ -126,6 +126,8 @@ class Game
     save_file = gets.chomp.downcase
 
     save_data = JSON.load(File.read("save_files/#{save_file}.json"))
+
+    continue_game(save_data['code_word'], save_data['good_guesses'], save_data['bad_guesses'], save_data['bad_guesses_used'])
   end
 
   def continue_game(code_word, good_guesses, bad_guesses, bad_guesses_used)
