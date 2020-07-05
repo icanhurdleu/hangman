@@ -1,3 +1,6 @@
+require 'json'
+SAVE_OPTION_ENABLED = true
+
 class Game
   attr_reader :tries
 
@@ -11,6 +14,17 @@ class Game
     @bad_guesses_used = 0
   end
 
+  def game
+    introduction
+    puts "Would you like to play a new game? (y/n): "
+    new_game = gets.chomp.downcase
+    if new_game == "y" ? play_new_game : continue_game
+    while play_again?
+      reset_counters
+      play_new_game
+    end
+  end
+
   def introduction
     puts "\n\n\n\n\n"
     puts "Welcome to Hangman!"
@@ -18,9 +32,21 @@ class Game
     puts "6 incorrect guesses before you lose."
   end
 
+  def play_again?
+    puts "\n"
+    print "Would you like to play again? (y/n): "
+    gets.chomp.downcase == "y" ? true : false
+  end
+
+  def reset_counters
+    @good_guesses = []
+    @bad_guesses = []
+    @bad_guesses_used = 0
+    @human = HumanPlayer.new
+  end
+
   def play_new_game
     @code_word = @computer.choose_code_word
-    introduction
     game_loop
   end
 
@@ -34,6 +60,15 @@ class Game
       if win?
         puts "Congrats! You guessed the word: #{@code_word}"
         break
+      end
+      if SAVE_OPTION_ENABLED
+        # prompt player to save the game
+        puts "\nSave game? (y/n): "
+        save_state = gets.chomp.downcase
+        if save_state == "y"
+          save_game
+          break
+        end
       end
     end
     unless win?
@@ -67,6 +102,41 @@ class Game
     @code_word.split("").uniq.sort == @good_guesses.sort
   end
 
+  def save_game
+    # saves game to be loaded for future play
+    Dir.mkdir 'save_files' unless Dir.exist?("save_files")
+
+    filename = "save#{Dir["save_files/**/*"].length}.json"
+
+    save_data = {
+      code_word: @code_word,
+      good_guesses: @good_guesses,
+      bad_guesses: @bad_guesses,
+      bad_guesses_used: @bad_guesses_used
+    }
+
+    File.write("save_files/#{filename}", JSON.dump(save_date))
+  end
+
+  def load_game
+    # loads a previous game
+    Dir.entries("save_files").each { |file| puts file[0...file.index('.')]}
+
+    puts "Which save file would you like to load? (type entire name here): "
+    save_file = gets.chomp.downcase
+
+    save_data = JSON.load(File.read("save_files/#{save_file}.json"))
+  end
+
+  def continue_game(code_word, good_guesses, bad_guesses, bad_guesses_used)
+    # continues a previously saved game
+    @code_word = code_word
+    @good_guesses = good_guesses
+    @bad_guesses = bad_guesses
+    @bad_guesses_used = bad_guesses_used
+
+    game_loop
+  end
 
 end
 
@@ -190,4 +260,4 @@ end
 
 
 g = Game.new
-g.play_new_game
+g.game
